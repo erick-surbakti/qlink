@@ -104,9 +104,50 @@ export default function ChecklistDashboard() {
         </div>
       </section>
 
+      <DashboardAnalysis records={records} initialLine={initialLine} />
+
       {selected && <DashboardReview record={selected} onClose={() => setSelected(null)} onApprove={() => approve(selected)} />}
     </main>
   );
+}
+
+function DashboardAnalysis({ records, initialLine }: { records: BrowserChecklistRecord[]; initialLine: string }) {
+  const [line, setLine] = useState(initialLine);
+  const [process, setProcess] = useState("");
+  const [mode, setMode] = useState<"period" | "month">("period");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const lines = [...new Set(records.map((record) => record.line))];
+  const matching = records.filter((record) => !line || record.line === line);
+  const record = matching[0] ?? records[0];
+  const areas = record?.assignedAreas ?? [1];
+  const forms = areas.flatMap(formsForArea).filter((form) => !process || form.id.includes(process));
+  const days = Array.from({ length: 31 }, (_, index) => index + 1);
+  const values = [22, 28, 24, 26, 28, 23, 29, 26, 26, 54, 27, 28, 19, 24, 25, 21, 27, 23, 25, 29, 21, 27, 23, 25, 28, 23, 27, 26, 28, 24, 26];
+  const chartPoints = values.map((value, index) => `${42 + index * 24},${210 - ((value - 8) / 48) * 170}`).join(" ");
+  const answerForDay = (itemId: string, day: number) => {
+    if (record?.answers[itemId] && day === new Date(record.updatedAt).getDate()) return record.answers[itemId];
+    if (day > 25) return "";
+    return day % 4 === 0 ? "OK" : day % 3 === 0 ? "✓" : "○";
+  };
+
+  return <section className="analysis-panel">
+    <div className="analysis-filters no-print">
+      <label><span>Line</span><select value={line} onChange={(event) => setLine(event.target.value)}><option value="">All</option>{lines.map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label><span>Process</span><select value={process} onChange={(event) => setProcess(event.target.value)}><option value="">All</option><option value="startup">Start-up Check</option><option value="process">Process Check</option><option value="quality">Quality Check</option></select></label>
+      <div className="date-mode"><span>Date filter</span><div><button className={mode === "period" ? "active" : ""} onClick={() => setMode("period")} type="button">Period</button><button className={mode === "month" ? "active" : ""} onClick={() => setMode("month")} type="button">Month</button></div></div>
+      <label><span>From date</span><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
+      <label><span>To date</span><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label>
+      <button type="button" className="analysis-pdf" onClick={() => window.print()}><FileDown size={17} />Generate PDF</button>
+    </div>
+
+    <div className="monthly-sheet">
+      <header><div><h2>Daily Checklist {record?.line ?? "Mock Line"}</h2><p>Month: {record?.month ?? "Mock month"} · Digital browser-session result</p></div><div className="sign-box"><span>Checked</span><strong>{record?.approvalStatus === "checked" ? "✓" : ""}</strong></div><div className="sign-box"><span>Approved</span><strong>{record?.approvalStatus === "checked" ? "✓" : ""}</strong></div></header>
+      <div className="monthly-grid-wrap"><table className="monthly-grid"><thead><tr><th>No.</th><th>Item check</th><th>Specification</th>{days.map((day) => <th key={day}>{day}</th>)}</tr></thead><tbody>{forms.flatMap((form, formIndex) => form.items.map((item, itemIndex) => <tr key={item.id}><td>{formIndex * 10 + itemIndex + 1}</td><td><strong>{item.name}</strong><small>{form.title}</small></td><td>{item.specification}</td>{days.map((day) => <td key={day}>{answerForDay(item.id, day)}</td>)}</tr>))}</tbody></table></div>
+    </div>
+
+    <div className="control-chart-card"><h2>Process Control Trend</h2><svg viewBox="0 0 800 250" role="img" aria-label="Mock monthly process control chart"><line className="axis" x1="42" y1="210" x2="770" y2="210" /><line className="axis" x1="42" y1="25" x2="42" y2="210" /><line className="ucl" x1="42" y1="70" x2="770" y2="70" /><line className="zone" x1="42" y1="105" x2="770" y2="105" /><line className="average" x1="42" y1="145" x2="770" y2="145" /><line className="zone" x1="42" y1="180" x2="770" y2="180" /><polyline points={chartPoints} />{values.map((value, index) => <circle key={index} cx={42 + index * 24} cy={210 - ((value - 8) / 48) * 170} r={value > 42 ? 5 : 3.5} className={value > 42 ? "alert-point" : ""} />)}<text x="48" y="64">UCL 41.9</text><text x="48" y="139">Avg 26.2</text><text x="704" y="98">ZONE A</text><text x="704" y="139">ZONE B</text><text x="704" y="174">ZONE C</text></svg></div>
+  </section>;
 }
 
 function DashboardReview({ record, onClose, onApprove }: { record: BrowserChecklistRecord; onClose: () => void; onApprove: () => void }) {
