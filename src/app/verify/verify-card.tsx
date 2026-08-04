@@ -140,9 +140,13 @@ export default function VerifyCard() {
                 <button
                   className="primary-button"
                   type="button"
-                  onClick={() => router.push(`/assignment?role=${selectedRole}&line=${encodeURIComponent(line)}`)}
+                  onClick={() => router.push(
+                    selectedRole === "leading"
+                      ? `/review?line=${encodeURIComponent(line)}`
+                      : `/assignment?role=${selectedRole}&line=${encodeURIComponent(line)}`,
+                  )}
                 >
-                  Select checklist pages <ArrowRight size={19} />
+                  {selectedRole === "leading" ? "Review operator checklist" : "Select checklist pages"} <ArrowRight size={19} />
                 </button>
               </div>
             </>
