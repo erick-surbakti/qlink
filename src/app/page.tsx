@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ClipboardCheck, Factory, UserRoundCog } from "lucide-react";
+import { ArrowRight, ClipboardCheck, Factory, LayoutDashboard, UserRoundCog } from "lucide-react";
 
 const roles = [
   {
@@ -7,12 +7,21 @@ const roles = [
     title: "Leading",
     description: "Open the checklist flow for production leading personnel.",
     icon: UserRoundCog,
+    href: "/verify?role=leading",
+  },
+  {
+    key: "dashboard",
+    title: "Dashboard",
+    description: "Review Operator checklist activity, approvals, and analysis.",
+    icon: LayoutDashboard,
+    href: "/dashboard",
   },
   {
     key: "operator",
     title: "Operator",
     description: "Open the checklist flow for production operators.",
     icon: Factory,
+    href: "/verify?role=operator",
   },
 ] as const;
 
@@ -28,8 +37,8 @@ export default function ChecklistRolePage() {
         <p className="lead">Select your checklist role before verifying your employee card.</p>
 
         <div className="role-grid">
-          {roles.map(({ key, title, description, icon: Icon }) => (
-            <Link className="role-card" href={`/verify?role=${key}`} key={key}>
+          {roles.map(({ title, description, icon: Icon, href }) => (
+            <Link className="role-card" href={href} key={href}>
               <span className="role-icon"><Icon size={30} /></span>
               <span className="role-copy">
                 <strong>{title}</strong>

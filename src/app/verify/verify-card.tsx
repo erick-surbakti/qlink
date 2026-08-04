@@ -142,7 +142,7 @@ export default function VerifyCard() {
                   type="button"
                   onClick={() => router.push(
                     selectedRole === "leading"
-                      ? `/dashboard?line=${encodeURIComponent(line)}`
+                      ? `/review?line=${encodeURIComponent(line)}`
                       : `/assignment?role=${selectedRole}&line=${encodeURIComponent(line)}`,
                   )}
                 >
