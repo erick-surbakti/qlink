@@ -29,3 +29,6 @@ coverage/
 Thumbs.db
 .idea/
 .vscode/
+
+# Disabled metadata from an accidentally nested Git repository
+src/app/.git.disabled/
