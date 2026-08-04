@@ -1,11 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BadgeCheck, CreditCard, Factory, LoaderCircle, ScanLine } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgeCheck, Check, CreditCard, Factory, FilePenLine, LoaderCircle, Save, ScanLine, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChecklistForm, ChecklistItem, formsForArea } from "@/lib/mock-checklist";
+import { BrowserChecklistRecord, CHECKLIST_STORAGE_PREFIX, checklistStorageKey } from "@/lib/mock-session";
 
 type ScanState = "waiting" | "reading" | "verified";
+
+function readLineRecords(line: string): BrowserChecklistRecord[] {
+  const records: BrowserChecklistRecord[] = [];
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key?.startsWith(CHECKLIST_STORAGE_PREFIX)) continue;
+    try {
+      const record = JSON.parse(window.localStorage.getItem(key) ?? "") as BrowserChecklistRecord;
+      if (record.id && record.line === line) records.push(record);
+    } catch {
+      // Ignore malformed mock entries without affecting other browser data.
+    }
+  }
+  return records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
 
 const MOCK_USERS = {
   leading: { name: "Mock Leading User", employeeId: "L-0001", role: "Production Leading" },
@@ -45,6 +62,7 @@ export default function VerifyCard() {
   const person = MOCK_USERS[selectedRole];
   const [state, setState] = useState<ScanState>("waiting");
   const [line, setLine] = useState("");
+  const [editing, setEditing] = useState(false);
   const keyboardBuffer = useRef("");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -136,6 +154,7 @@ export default function VerifyCard() {
                 <div><dt>Production Line</dt><dd>{line}</dd></div>
               </dl>
               <div className="verified-actions">
+                <button className="secondary-button" type="button" onClick={() => setEditing(true)}><FilePenLine size={18} />Edit checklist data</button>
                 <button className="secondary-button" type="button" onClick={() => setState("waiting")}>Scan another card</button>
                 <button
                   className="primary-button"
@@ -155,6 +174,88 @@ export default function VerifyCard() {
 
         <p className="privacy-note"><CreditCard size={16} /> RFID number is intentionally hidden to prevent card-data misuse.</p>
       </section>
+
+      {editing && <EditWizard line={line} onClose={() => setEditing(false)} />}
     </main>
   );
+}
+
+function EditWizard({ line, onClose }: { line: string; onClose: () => void }) {
+  const record = useMemo(() => readLineRecords(line)[0], [line]);
+  const areas = record?.assignedAreas?.length ? record.assignedAreas : [1];
+  const forms = useMemo(() => areas.flatMap(formsForArea), [areas]);
+  const steps = useMemo(() => forms.flatMap((form) => form.items.map((item) => ({ form, item }))), [forms]);
+  const [answers, setAnswers] = useState<Record<string, string>>(() => record?.answers ?? defaultMockAnswers(forms));
+  const [step, setStep] = useState(0);
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
+  const allAnswered = steps.every((entry) => Boolean(answers[entry.item.id]));
+
+  const save = () => {
+    if (!record) return onClose();
+    const updated: BrowserChecklistRecord = { ...record, answers, updatedAt: new Date().toISOString() };
+    window.localStorage.setItem(checklistStorageKey(record.line, record.assignedAreas), JSON.stringify(updated));
+    onClose();
+  };
+
+  if (!current) {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="wizard-modal" role="dialog" aria-modal="true">
+          <button className="modal-close" type="button" onClick={onClose} aria-label="Close"><X size={21} /></button>
+          <p className="eyebrow">EDIT CHECKLIST DATA</p>
+          <h2>No checklist data to edit</h2>
+          <p className="lead">No Operator checklist record was found for <strong>{line}</strong>. Complete an Operator flow first, then edit its data here.</p>
+          <div className="wizard-actions"><button className="primary-button" type="button" onClick={onClose}>Close</button></div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="wizard-modal" role="dialog" aria-modal="true" aria-labelledby="edit-wizard-title">
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Close"><X size={21} /></button>
+        <p className="eyebrow">EDIT CHECKLIST DATA · {current.form.frequency.toUpperCase()}</p>
+        <h2 id="edit-wizard-title">{current.form.title}</h2>
+        <div className="wizard-step-row">{steps.map((entry, index) => <button type="button" className={`${index === step ? "active " : ""}${answers[entry.item.id] ? "answered" : ""}`} onClick={() => setStep(index)} key={entry.item.id}>{index + 1}</button>)}</div>
+        <div className="wizard-question">
+          <span>Item {step + 1} of {steps.length}</span>
+          <h3>{current.item.name}</h3>
+          <div className="specification"><strong>Specification</strong><p>{current.item.specification}</p></div>
+          <EditAnswerInput item={current.item} value={answers[current.item.id] ?? ""} onChange={(value) => setAnswers((prev) => ({ ...prev, [current.item.id]: value }))} />
+        </div>
+        <div className="wizard-actions">
+          <button className="draft-button" type="button" onClick={save}><Save size={17} />Save changes</button>
+          <div>
+            <button className="secondary-button" type="button" disabled={step === 0} onClick={() => setStep(step - 1)}>Previous</button>
+            {!isLast && <button className="primary-button" type="button" disabled={!answers[current.item.id]} onClick={() => setStep(step + 1)}>Next<ArrowRight size={17} /></button>}
+            {isLast && <button className="complete-button" type="button" disabled={!allAnswered} onClick={save}><Check size={17} />Save & close</button>}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function defaultMockAnswers(forms: ChecklistForm[]): Record<string, string> {
+  const answers: Record<string, string> = {};
+  for (const form of forms) {
+    for (const item of form.items) {
+      if (item.answerType === "choice") answers[item.id] = "OK";
+      else if (item.answerType === "number") answers[item.id] = "42";
+      else answers[item.id] = "Mock operator note for demonstration.";
+    }
+  }
+  return answers;
+}
+
+function EditAnswerInput({ item, value, onChange }: { item: ChecklistItem; value: string; onChange: (value: string) => void }) {
+  if (item.answerType === "choice") {
+    return <div className="choice-grid">{["OK", "NG", "N/A"].map((choice) => <button type="button" className={value === choice ? "selected" : ""} onClick={() => onChange(choice)} key={choice}>{choice}</button>)}</div>;
+  }
+  if (item.answerType === "number") {
+    return <label className="answer-field"><span>Measurement result</span><div><input type="number" value={value} onChange={(event) => onChange(event.target.value)} placeholder="Enter value" /><em>{item.unit}</em></div></label>;
+  }
+  return <label className="answer-field"><span>Operator note</span><textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder="Describe the condition or abnormality..." /></label>;
 }
