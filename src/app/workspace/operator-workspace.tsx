@@ -1,15 +1,11 @@
 "use client";
 
 import { AREA_STATIONS, ChecklistForm, ChecklistItem, formsForArea } from "@/lib/mock-checklist";
+import { BrowserChecklistRecord, checklistStorageKey } from "@/lib/mock-session";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ClipboardList, Clock3, FileDown, Factory, Save, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-
-type StoredProgress = {
-  answers: Record<string, string>;
-  completedForms: string[];
-};
 
 function parseAreas(value: string | null) {
   const areas = (value ?? "1").split(",").map(Number).filter((number) => number >= 1 && number <= 10);
@@ -21,7 +17,7 @@ export default function OperatorWorkspace() {
   const line = params.get("line") || "Mock Production Line";
   const assignedAreas = useMemo(() => parseAreas(params.get("areas")), [params]);
   const forms = useMemo(() => assignedAreas.flatMap(formsForArea), [assignedAreas]);
-  const storageKey = useMemo(() => `q-link-checklist-mock:${line}:${assignedAreas.join("-")}`, [assignedAreas, line]);
+  const storageKey = useMemo(() => checklistStorageKey(line, assignedAreas), [assignedAreas, line]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [completedForms, setCompletedForms] = useState<string[]>([]);
   const [activeForm, setActiveForm] = useState<ChecklistForm | null>(null);
@@ -32,7 +28,7 @@ export default function OperatorWorkspace() {
     const saved = window.localStorage.getItem(storageKey);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved) as StoredProgress;
+        const parsed = JSON.parse(saved) as BrowserChecklistRecord;
         setAnswers(parsed.answers ?? {});
         setCompletedForms(parsed.completedForms ?? []);
       } catch {
@@ -44,9 +40,25 @@ export default function OperatorWorkspace() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const progress: StoredProgress = { answers, completedForms };
+    const existing = window.localStorage.getItem(storageKey);
+    let previous: Partial<BrowserChecklistRecord> = {};
+    try { previous = existing ? JSON.parse(existing) as BrowserChecklistRecord : {}; } catch { previous = {}; }
+    const now = new Date();
+    const progress: BrowserChecklistRecord = {
+      id: previous.id ?? crypto.randomUUID(),
+      line,
+      assignedAreas,
+      operatorName: "Mock Operator User",
+      month: now.toISOString().slice(0, 7),
+      answers,
+      completedForms,
+      updatedAt: now.toISOString(),
+      approvalStatus: previous.approvalStatus ?? "pending",
+      checkedAt: previous.checkedAt,
+      checkedBy: previous.checkedBy,
+    };
     window.localStorage.setItem(storageKey, JSON.stringify(progress));
-  }, [answers, completedForms, hydrated, storageKey]);
+  }, [answers, assignedAreas, completedForms, hydrated, line, storageKey]);
 
   const openForm = (form: ChecklistForm) => {
     setActiveForm(form);
