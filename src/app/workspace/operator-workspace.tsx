@@ -4,7 +4,7 @@ import { AREA_STATIONS, ChecklistItem, formsForArea } from "@/lib/mock-checklist
 import { BrowserChecklistRecord, checklistStorageKey } from "@/lib/mock-session";
 import { ArrowLeft, CheckCircle2, ClipboardList, Factory, LockKeyhole, Send } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 function parseAreas(value: string | null) {
@@ -13,6 +13,7 @@ function parseAreas(value: string | null) {
 }
 
 export default function OperatorWorkspace() {
+  const router = useRouter();
   const params = useSearchParams();
   const line = params.get("line") || "Mock Production Line";
   const assignedAreas = useMemo(() => parseAreas(params.get("areas")), [params]);
@@ -72,11 +73,12 @@ export default function OperatorWorkspace() {
     };
     window.localStorage.setItem(storageKey, JSON.stringify(record));
     setSubmitted(true);
+    router.push("/");
   };
 
   return <main className="workspace-shell"><section className="workspace-panel simplified-workspace">
     <header className="workspace-header no-print">
-      <Link href="/" className="back-button" aria-label="Back"><ArrowLeft size={22} /></Link>
+      <Link href={`/assignment?role=operator&line=${encodeURIComponent(line)}`} className="back-button" aria-label="Back to area selection"><ArrowLeft size={22} /></Link>
       <div><p className="eyebrow">OPERATOR DIGITAL CHECKLIST</p><h1>Fill Checklist</h1><p className="lead"><Factory size={17} />{line} · Areas {assignedAreas.join(", ")}</p></div>
     </header>
 
