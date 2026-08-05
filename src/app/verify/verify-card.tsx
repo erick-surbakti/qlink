@@ -1,16 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BadgeCheck, CreditCard, Factory, LoaderCircle, ScanLine } from "lucide-react";
+import { ArrowLeft, CreditCard, Factory, LoaderCircle, ScanLine } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type ScanState = "waiting" | "reading" | "verified";
-
-const MOCK_USERS = {
-  leading: { name: "Mock Leading User", employeeId: "L-0001", role: "Production Leading" },
-  operator: { name: "Mock Operator User", employeeId: "O-0001", role: "Production Operator" },
-} as const;
+type ScanState = "waiting" | "reading";
 
 const PRODUCTION_LINES = [
   "CP1H Line #1",
@@ -42,7 +37,6 @@ export default function VerifyCard() {
   const router = useRouter();
   const params = useSearchParams();
   const selectedRole = params.get("role") === "leading" ? "leading" : "operator";
-  const person = MOCK_USERS[selectedRole];
   const [state, setState] = useState<ScanState>("waiting");
   const [line, setLine] = useState("");
   const keyboardBuffer = useRef("");
@@ -53,11 +47,15 @@ export default function VerifyCard() {
     [selectedRole],
   );
 
+  const nextPath = useCallback(() => selectedRole === "leading"
+    ? `/dashboard?line=${encodeURIComponent(line)}`
+    : `/assignment?role=${selectedRole}&line=${encodeURIComponent(line)}`, [line, selectedRole]);
+
   const verify = useCallback(() => {
     if (state !== "waiting" || !line) return;
     setState("reading");
-    window.setTimeout(() => setState("verified"), 700);
-  }, [line, state]);
+    window.setTimeout(() => router.push(nextPath()), 450);
+  }, [line, nextPath, router, state]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -95,18 +93,16 @@ export default function VerifyCard() {
         </header>
 
         <div className={`scanner-card scanner-${state}`}>
-          {state !== "verified" && (
-            <label className="line-field">
+          <label className="line-field">
               <span><Factory size={18} /> Production Line</span>
               <select value={line} onChange={(event) => setLine(event.target.value)} disabled={state !== "waiting"}>
                 <option value="">Select production line…</option>
                 {PRODUCTION_LINES.map((item) => <option value={item} key={item}>{item}</option>)}
               </select>
-            </label>
-          )}
+          </label>
 
           <div className="scanner-visual" aria-hidden="true">
-            {state === "verified" ? <BadgeCheck size={48} /> : state === "reading" ? <LoaderCircle className="spin" size={48} /> : <ScanLine size={48} />}
+            {state === "reading" ? <LoaderCircle className="spin" size={48} /> : <ScanLine size={48} />}
           </div>
 
           {state === "waiting" && (
@@ -126,31 +122,6 @@ export default function VerifyCard() {
             </>
           )}
 
-          {state === "verified" && (
-            <>
-              <h2>RFID verified</h2>
-              <p className="verified-caption">Card identity confirmed. The RFID number remains hidden.</p>
-              <dl className="identity-grid">
-                <div><dt>Name</dt><dd>{person.name}</dd></div>
-                <div><dt>Employee ID</dt><dd>{person.employeeId}</dd></div>
-                <div><dt>Production Line</dt><dd>{line}</dd></div>
-              </dl>
-              <div className="verified-actions">
-                <button className="secondary-button" type="button" onClick={() => setState("waiting")}>Scan another card</button>
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={() => router.push(
-                    selectedRole === "leading"
-                      ? `/dashboard?line=${encodeURIComponent(line)}`
-                      : `/assignment?role=${selectedRole}&line=${encodeURIComponent(line)}`,
-                  )}
-                >
-                  {selectedRole === "leading" ? "Review operator checklist" : "Select checklist pages"} <ArrowRight size={19} />
-                </button>
-              </div>
-            </>
-          )}
         </div>
 
         <p className="privacy-note"><CreditCard size={16} /> RFID number is intentionally hidden to prevent card-data misuse.</p>

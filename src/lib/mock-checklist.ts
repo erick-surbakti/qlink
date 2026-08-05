@@ -36,8 +36,10 @@ export const AREA_STATIONS: AreaStation[] = [
 
 const safetyItems: ChecklistItem[] = [
   { id: "esd-shoes", name: "ESD shoes condition", specification: "Clean, undamaged, and used correctly", answerType: "choice" },
-  { id: "work-area", name: "Work area condition", specification: "No foreign material and no obstruction", answerType: "choice" },
-  { id: "safety-device", name: "Safety device", specification: "Installed and operating normally", answerType: "choice" },
+  { id: "work-area", name: "Working area", specification: "No foreign material and no obstruction", answerType: "choice" },
+  { id: "temperature", name: "Temperature", specification: "20 - 25 °C", answerType: "number", unit: "°C" },
+  { id: "humidity", name: "Humidity", specification: "30 - 75 %", answerType: "number", unit: "%" },
+  { id: "lighting", name: "Lighting condition", specification: "No blinking", answerType: "choice" },
 ];
 
 const processItems: ChecklistItem[] = [
