@@ -9,6 +9,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type QueueTab = "queue" | "all" | "checked";
 
+function createSeedRecord(): BrowserChecklistRecord {
+  const assignedAreas = [1, 2];
+  const forms = assignedAreas.flatMap(formsForArea);
+  const answers: Record<string, string> = {};
+  for (const form of forms) {
+    for (const item of form.items) {
+      answers[item.id] = item.answerType === "number" ? "42" : item.answerType === "text" ? "Mock operator note." : "OK";
+    }
+  }
+  return {
+    id: crypto.randomUUID(),
+    line: "CP1H Line #1",
+    assignedAreas,
+    operatorName: "Mock Operator User",
+    month: new Date().toISOString().slice(0, 7),
+    answers,
+    completedForms: forms.map((form) => form.id),
+    updatedAt: new Date().toISOString(),
+    approvalStatus: "pending",
+  };
+}
+
 function readBrowserRecords() {
   const records: BrowserChecklistRecord[] = [];
   for (let index = 0; index < window.localStorage.length; index += 1) {
@@ -20,6 +42,11 @@ function readBrowserRecords() {
     } catch {
       // Ignore malformed mock entries without affecting other browser data.
     }
+  }
+  if (!records.length) {
+    const seeded = createSeedRecord();
+    window.localStorage.setItem(checklistStorageKey(seeded.line, seeded.assignedAreas), JSON.stringify(seeded));
+    records.push(seeded);
   }
   return records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }

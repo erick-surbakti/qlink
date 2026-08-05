@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ClipboardCheck, Clock3, Eye, Factory, MinusCircle, UserRound } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, Clock3, Eye, Factory, MinusCircle, UserRound } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 type MockPage = {
@@ -34,6 +34,7 @@ const STATUS = {
 } as const;
 
 export default function OperatorChecklistReview() {
+  const router = useRouter();
   const params = useSearchParams();
   const line = params.get("line") || "Mock Production Line";
   const [selected, setSelected] = useState<MockPage | null>(null);
@@ -51,6 +52,7 @@ export default function OperatorChecklistReview() {
             <p className="lead"><Factory size={17} /> {line}</p>
           </div>
           <span className="mock-badge">Mock data</span>
+          <button className="primary-button" type="button" onClick={() => router.push(`/dashboard?line=${encodeURIComponent(line)}`)}>Open dashboard<ArrowRight size={18} /></button>
         </header>
 
         <div className="review-stats">
