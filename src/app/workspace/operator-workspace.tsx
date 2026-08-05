@@ -78,7 +78,6 @@ export default function OperatorWorkspace() {
     <header className="workspace-header no-print">
       <Link href="/" className="back-button" aria-label="Back"><ArrowLeft size={22} /></Link>
       <div><p className="eyebrow">OPERATOR DIGITAL CHECKLIST</p><h1>Fill Checklist</h1><p className="lead"><Factory size={17} />{line} · Areas {assignedAreas.join(", ")}</p></div>
-      <button className="operator-submit-button" type="button" onClick={submitAssignment} disabled={!allComplete || submitted}>{submitted ? <LockKeyhole size={18} /> : <Send size={18} />}{submitted ? "Submitted & locked" : "Submit my areas"}</button>
     </header>
 
     <div className="quick-progress no-print"><span><ClipboardList size={19} />Fill every result directly in the table. Changes save automatically.</span><strong>{answeredCount}/{totalItems} items</strong></div>
@@ -102,6 +101,7 @@ export default function OperatorWorkspace() {
         </section>;
       })}
     </div>
+    {allComplete && !submitted && <div className="bottom-submit no-print"><div><strong>All assigned areas are complete</strong><small>Submit once to lock your entries and hand them over to Leading.</small></div><button className="operator-submit-button" type="button" onClick={submitAssignment}><Send size={18} />Submit my areas</button></div>}
     <footer className={`autosave-footer no-print${allComplete ? " complete" : ""}`}><span>{submitted ? <LockKeyhole size={20} /> : allComplete ? <CheckCircle2 size={20} /> : <ClipboardList size={20} />}</span><div><strong>{submitted ? "Your assigned areas have been submitted" : allComplete ? "Ready to submit" : "Draft saved automatically"}</strong><small>{submitted ? "These areas are locked. Another Operator can continue the remaining areas on this line." : allComplete ? "Submit once to hand your areas over to Leading." : "Continue filling the empty rows—no Next button is required."}</small></div></footer>
   </section></main>;
 }
