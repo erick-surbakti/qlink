@@ -49,17 +49,17 @@ export default function AssignmentSelector() {
   return <main className="shell"><section className="assignment-panel compact-assignment">
     <header className="verify-header">
       <Link href={`/verify?role=${role}`} className="back-button" aria-label="Back"><ArrowLeft size={22} /></Link>
-      <div><p className="eyebrow">OPERATOR CHECKLIST · {line}</p><h1>Select Your Work Area</h1><p className="lead">Select the area range once, check its position, then open the checklist directly.</p></div>
+      <div><p className="eyebrow">OPERATOR CHECKLIST · {line}</p><h1>Pilih Rentang Pengerjaan</h1><p className="lead">Pilih awal dan akhir pengerjaan, periksa posisinya, lalu buka checklist.</p></div>
     </header>
 
     <div className="assignment-combined">
       <div className="range-card">
         <div className="range-fields">
-          <label><span>Start area</span><select value={startArea} onChange={(event) => chooseStart(Number(event.target.value))}>{Array.from({ length: TOTAL_AREAS }, (_, index) => index + 1).map((area) => <option value={area} disabled={completedAreas.includes(area)} key={area}>Area {area}{completedAreas.includes(area) ? " — submitted" : ""}</option>)}</select></label>
+          <label><span>Awal Pengerjaan</span><select value={startArea} onChange={(event) => chooseStart(Number(event.target.value))}>{Array.from({ length: TOTAL_AREAS }, (_, index) => index + 1).map((area) => <option value={area} disabled={completedAreas.includes(area)} key={area}>Tahap {area}{completedAreas.includes(area) ? " — submitted" : ""}</option>)}</select></label>
           <span className="range-arrow"><ArrowRight size={24} /></span>
-          <label><span>End area</span><select value={endArea} onChange={(event) => setEndArea(Number(event.target.value))}>{Array.from({ length: TOTAL_AREAS - startArea + 1 }, (_, index) => startArea + index).map((area) => <option value={area} disabled={areaRange(startArea, area).some((value) => completedAreas.includes(value))} key={area}>Area {area}</option>)}</select></label>
+          <label><span>Akhir Pengerjaan</span><select value={endArea} onChange={(event) => setEndArea(Number(event.target.value))}>{Array.from({ length: TOTAL_AREAS - startArea + 1 }, (_, index) => startArea + index).map((area) => <option value={area} disabled={areaRange(startArea, area).some((value) => completedAreas.includes(value))} key={area}>Tahap {area}</option>)}</select></label>
         </div>
-        <div className="selection-preview"><Layers3 size={22} /><span>Assigned area</span><strong>{startArea === endArea ? `Area ${startArea}` : `Areas ${startArea}-${endArea}`}</strong><small>{selectedAreas.length} of {TOTAL_AREAS} areas</small></div>
+        <div className="selection-preview"><Layers3 size={22} /><span>Rentang pengerjaan</span><strong>{startArea === endArea ? `Tahap ${startArea}` : `Tahap ${startArea}-${endArea}`}</strong><small>{selectedAreas.length} dari {TOTAL_AREAS} tahap</small></div>
       </div>
 
       <div className="inline-u-confirm">

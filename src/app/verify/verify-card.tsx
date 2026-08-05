@@ -48,7 +48,7 @@ export default function VerifyCard() {
   );
 
   const nextPath = useCallback(() => selectedRole === "leading"
-    ? `/dashboard?line=${encodeURIComponent(line)}`
+    ? `/review?line=${encodeURIComponent(line)}`
     : `/assignment?role=${selectedRole}&line=${encodeURIComponent(line)}`, [line, selectedRole]);
 
   const verify = useCallback(() => {
