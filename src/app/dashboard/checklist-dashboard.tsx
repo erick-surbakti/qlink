@@ -27,6 +27,8 @@ function createSeedRecord(): BrowserChecklistRecord {
     answers,
     completedForms: forms.map((form) => form.id),
     updatedAt: new Date().toISOString(),
+    submissionStatus: "submitted",
+    submittedAt: new Date().toISOString(),
     approvalStatus: "pending",
   };
 }
@@ -75,10 +77,10 @@ export default function ChecklistDashboard() {
   }, [refresh]);
 
   const lines = useMemo(() => [...new Set(records.map((record) => record.line))], [records]);
-  const queueCount = records.filter((record) => record.approvalStatus === "pending").length;
+  const queueCount = records.filter((record) => record.submissionStatus === "submitted" && record.approvalStatus === "pending").length;
   const checkedCount = records.filter((record) => record.approvalStatus === "checked").length;
   const filtered = records.filter((record) => {
-    if (tab === "queue" && record.approvalStatus !== "pending") return false;
+    if (tab === "queue" && (record.submissionStatus !== "submitted" || record.approvalStatus !== "pending")) return false;
     if (tab === "checked" && record.approvalStatus !== "checked") return false;
     if (line && record.line !== line) return false;
     if (area && !record.assignedAreas.includes(Number(area))) return false;
@@ -145,15 +147,17 @@ function DashboardAnalysis({ records, initialLine }: { records: BrowserChecklist
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const lines = [...new Set(records.map((record) => record.line))];
-  const matching = records.filter((record) => !line || record.line === line);
-  const record = matching[0] ?? records[0];
-  const areas = record?.assignedAreas ?? [1];
+  const matching = records.filter((record) => (!line || record.line === line) && record.submissionStatus === "submitted");
+  const record = matching[0] ?? records.find((entry) => entry.submissionStatus === "submitted") ?? records[0];
+  const contributingRecords = matching.length ? matching : record ? [record] : [];
+  const areas = [...new Set(contributingRecords.flatMap((entry) => entry.assignedAreas))].sort((left, right) => left - right);
+  const combinedAnswers = Object.assign({}, ...contributingRecords.map((entry) => entry.answers)) as Record<string, string>;
   const forms = areas.flatMap(formsForArea).filter((form) => !process || form.id.includes(process));
   const days = Array.from({ length: 31 }, (_, index) => index + 1);
   const values = [22, 28, 24, 26, 28, 23, 29, 26, 26, 54, 27, 28, 19, 24, 25, 21, 27, 23, 25, 29, 21, 27, 23, 25, 28, 23, 27, 26, 28, 24, 26];
   const chartPoints = values.map((value, index) => `${42 + index * 24},${210 - ((value - 8) / 48) * 170}`).join(" ");
   const answerForDay = (itemId: string, day: number) => {
-    if (record?.answers[itemId] && day === new Date(record.updatedAt).getDate()) return record.answers[itemId];
+    if (combinedAnswers[itemId] && day === new Date(record.updatedAt).getDate()) return combinedAnswers[itemId];
     if (day > 25) return "";
     return day % 4 === 0 ? "OK" : day % 3 === 0 ? "✓" : "○";
   };

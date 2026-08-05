@@ -9,6 +9,8 @@ export type BrowserChecklistRecord = {
   answers: Record<string, string>;
   completedForms: string[];
   updatedAt: string;
+  submissionStatus?: "draft" | "submitted";
+  submittedAt?: string;
   approvalStatus: "pending" | "checked";
   checkedAt?: string;
   checkedBy?: string;
