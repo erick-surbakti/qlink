@@ -89,11 +89,14 @@ export default function OperatorWorkspace() {
         const area = AREA_STATIONS[areaNumber - 1];
         return <section className="compact-area" key={areaNumber}>
           <header><span className="area-number">{areaNumber}</span><div><h2>{area.name}</h2><p>{area.process}</p></div></header>
-          {formsForArea(areaNumber).map((form) => {
+          {formsForArea(areaNumber).map((form, formIndex) => {
             const complete = completedForms.includes(form.id);
-            return <div className={`inline-checklist${complete ? " complete" : ""}`} key={form.id}>
+            return <div className={`process-group process-${formIndex + 1}`} key={form.id}>
+              <div className="process-separator"><span>Process {formIndex + 1}</span><div><strong>{form.title.replace(`${area.name} - `, "")}</strong><small>{formIndex === 0 ? "Initial condition before production" : formIndex === 1 ? "Daily machine and process verification" : "Product quality confirmation"}</small></div><em>{formIndex + 1} / 3</em></div>
+              <div className={`inline-checklist${complete ? " complete" : ""}`}>
               <div className="inline-checklist-title"><div><strong>{form.title}</strong><small>{form.frequency}</small></div>{complete && <span><CheckCircle2 size={16} />Complete</span>}</div>
               <div className="inline-table-wrap"><table><thead><tr><th>Item</th><th>Specification</th><th>Action / Result</th></tr></thead><tbody>{form.items.map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.specification}</td><td><InlineAnswer item={item} value={answers[item.id] ?? ""} disabled={submitted} onChange={(value) => setAnswers((current) => ({ ...current, [item.id]: value }))} /></td></tr>)}</tbody></table></div>
+              </div>
             </div>;
           })}
         </section>;
