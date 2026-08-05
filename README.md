@@ -1,4 +1,4 @@
-# Q-Link Checklist Mock CHECKLIST MOCK
+# Q-Link Checklist Mock CHECKLIST MOCK DONT TAKE THISSS LMAOOOOOOOOFFFF
 
 Standalone frontend-only prototype. It does not connect to the Q-Link database, APIs, authentication, or production RFID records.
 
