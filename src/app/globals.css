@@ -265,6 +265,13 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 46px); line-height: 1.08; letter-spa
 .review-area-table { min-width: 760px; }
 .result-ng { display: inline-block; padding: 3px 11px; color: white; background: #d92d20; border-radius: 999px; font-size: 12px; font-weight: 850; }
 .result-value { font-weight: 750; }
+.accordion-toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); background: #fcfdff; flex-wrap: wrap; }
+.editing-hint { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; color: var(--blue); font-size: 13px; font-weight: 750; }
+.edit-area-button, .save-area-button, .cancel-area-button { min-height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; border-radius: 9px; cursor: pointer; font-weight: 750; }
+.edit-area-button { color: var(--blue); border: 1px solid #b9c7ec; background: white; }.edit-area-button:hover { background: #f0f5ff; }
+.save-area-button { color: white; border: 0; background: var(--green); }.save-area-button:hover { filter: brightness(.96); }
+.cancel-area-button { color: #667085; border: 1px solid #d9e0eb; background: white; }.cancel-area-button:hover { background: #f6f7f9; }
+.inline-choice.three { grid-template-columns: repeat(3, minmax(60px, 1fr)); }
 
 @media (max-width: 700px) {
   .review-shell { padding: 14px; }.review-panel { padding: 22px 16px; border-radius: 20px; }.review-header { grid-template-columns: auto 1fr; }.mock-badge { grid-column: 2; justify-self: start; }.review-header .primary-button { grid-column: 2; justify-self: start; margin-top: 8px; }.review-stats { grid-template-columns: 1fr; }

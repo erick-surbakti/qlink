@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ClipboardCheck, Clock3, Eye, Factory, TriangleAlert, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ClipboardCheck, Clock3, Eye, Factory, PencilLine, TriangleAlert, UserRound, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { AREA_STATIONS, formsForArea } from "@/lib/mock-checklist";
-import { BrowserChecklistRecord, buildMockSubmittedRecord, CHECKLIST_STORAGE_PREFIX } from "@/lib/mock-session";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AREA_STATIONS, ChecklistItem, formsForArea } from "@/lib/mock-checklist";
+import { BrowserChecklistRecord, buildMockSubmittedRecord, checklistStorageKey, CHECKLIST_STORAGE_PREFIX } from "@/lib/mock-session";
 
 function readSubmittedRecords(line: string): BrowserChecklistRecord[] {
   const records: BrowserChecklistRecord[] = [];
@@ -31,16 +31,23 @@ export default function OperatorChecklistReview() {
   const params = useSearchParams();
   const line = params.get("line") || "Mock Production Line";
 
-  const records = useMemo(() => {
+  const [records, setRecords] = useState<BrowserChecklistRecord[]>([]);
+  const [selected, setSelected] = useState<BrowserChecklistRecord | null>(null);
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [editingAreas, setEditingAreas] = useState<Set<number>>(() => new Set());
+  const [open, setOpen] = useState<Set<number>>(() => new Set());
+
+  const refresh = useCallback(() => {
     const found = readSubmittedRecords(line);
-    if (found.length) return found;
+    if (found.length) return setRecords(found);
     const mock = buildMockSubmittedRecord(line, [1, 2]);
     mock.answers["a1-quality-sample-condition"] = "NG";
-    return [mock];
+    setRecords([mock]);
   }, [line]);
 
-  const [selected, setSelected] = useState<BrowserChecklistRecord | null>(null);
-  const [open, setOpen] = useState<Set<number>>(() => new Set());
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const toggle = (area: number) => {
     setOpen((current) => {
@@ -49,6 +56,39 @@ export default function OperatorChecklistReview() {
       else next.add(area);
       return next;
     });
+  };
+
+  const openRecord = (record: BrowserChecklistRecord) => {
+    setSelected(record);
+    setEdits(record.answers);
+    setEditingAreas(new Set());
+    setOpen(new Set(record.assignedAreas.slice(0, 1)));
+  };
+
+  const startEditing = (area: number) => {
+    setEditingAreas((current) => new Set(current).add(area));
+  };
+
+  const saveArea = (area: number) => {
+    if (!selected) return;
+    const updated: BrowserChecklistRecord = { ...selected, answers: edits, updatedAt: new Date().toISOString() };
+    window.localStorage.setItem(checklistStorageKey(updated.line, updated.assignedAreas), JSON.stringify(updated));
+    setSelected(updated);
+    setEditingAreas((current) => {
+      const next = new Set(current);
+      next.delete(area);
+      return next;
+    });
+    refresh();
+  };
+
+  const cancelEditing = (area: number) => {
+    setEditingAreas((current) => {
+      const next = new Set(current);
+      next.delete(area);
+      return next;
+    });
+    if (selected) setEdits(selected.answers);
   };
 
   const distinctAreas = useMemo(() => {
@@ -96,14 +136,14 @@ export default function OperatorChecklistReview() {
                     <td><span className="progress-value">{answered}/{items.length}</span></td>
                     <td>{ngCount ? <span className="ng-badge"><TriangleAlert size={14} />{ngCount} NG</span> : <span className="empty-value">—</span>}</td>
                     <td><span className={`status-pill ${record.approvalStatus === "checked" ? "completed" : "in-progress"}`}>{record.approvalStatus === "checked" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}{record.approvalStatus === "checked" ? "Checked" : "Need review"}</span></td>
-                    <td><button className="view-page" type="button" onClick={() => setSelected(record)}><Eye size={17} />View</button></td>
+                    <td><button className="view-page" type="button" onClick={() => openRecord(record)}><Eye size={17} />View</button></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="mock-note">Leading is read-only in this prototype and reviews checklist areas submitted by Operators.</p>
+        <p className="mock-note">Leading can review and directly edit Operator entries inside each step before approval.</p>
       </section>
 
       {selected && (
@@ -122,6 +162,7 @@ export default function OperatorChecklistReview() {
                 const answered = items.filter((item) => Boolean(selected.answers[item.id])).length;
                 const ngItems = items.filter((item) => selected.answers[item.id] === "NG");
                 const isOpen = open.has(area);
+                const isEditing = editingAreas.has(area);
                 return (
                   <div className={`review-accordion${isOpen ? " open" : ""}`} key={area}>
                     <button className="review-accordion-head" type="button" onClick={() => toggle(area)} aria-expanded={isOpen}>
@@ -137,14 +178,25 @@ export default function OperatorChecklistReview() {
 
                     {isOpen && (
                       <div className="review-accordion-body">
+                        <div className="accordion-toolbar">
+                          {isEditing ? (
+                            <>
+                              <span className="editing-hint"><PencilLine size={14} />Editing this area — changes apply on save</span>
+                              <button className="save-area-button" type="button" onClick={() => saveArea(area)}><Check size={15} />Save</button>
+                              <button className="cancel-area-button" type="button" onClick={() => cancelEditing(area)}><X size={15} />Cancel</button>
+                            </>
+                          ) : (
+                            <button className="edit-area-button" type="button" onClick={() => startEditing(area)}><PencilLine size={15} />Edit data</button>
+                          )}
+                        </div>
                         <div className="review-table-wrap">
                           <table className="review-table review-area-table">
                             <thead><tr><th>Checklist</th><th>Item check</th><th>Specification</th><th>Result</th></tr></thead>
                             <tbody>
                               {forms.flatMap((form) => form.items.map((item) => {
-                                const value = selected.answers[item.id] || "—";
+                                const value = (isEditing ? edits : selected.answers)[item.id] || "—";
                                 const isNg = value === "NG";
-                                return <tr key={item.id}><td>{form.title}</td><td><strong>{item.name}</strong></td><td>{item.specification}</td><td>{isNg ? <span className="result-ng">NG</span> : <span className="result-value">{value}</span>}</td></tr>;
+                                return <tr key={item.id}><td>{form.title}</td><td><strong>{item.name}</strong></td><td>{item.specification}</td><td>{isEditing ? <InlineAnswer item={item} value={value} onChange={(next) => setEdits((current) => ({ ...current, [item.id]: next }))} /> : isNg ? <span className="result-ng">NG</span> : <span className="result-value">{value}</span>}</td></tr>;
                               }))}
                             </tbody>
                           </table>
@@ -160,4 +212,14 @@ export default function OperatorChecklistReview() {
       )}
     </main>
   );
+}
+
+function InlineAnswer({ item, value, onChange }: { item: ChecklistItem; value: string; onChange: (value: string) => void }) {
+  if (item.answerType === "choice") {
+    return <div className="inline-choice three">{["OK", "NG", "N/A"].map((choice) => <button type="button" className={value === choice ? `selected ${choice.toLowerCase()}` : ""} onClick={() => onChange(choice)} key={choice}>{choice}</button>)}</div>;
+  }
+  if (item.answerType === "number") {
+    return <label className="inline-number"><input type="number" inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0" /><span>{item.unit}</span></label>;
+  }
+  return <input className="inline-text" value={value} onChange={(event) => onChange(event.target.value)} placeholder="Type note only if needed" />;
 }
