@@ -247,6 +247,7 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 46px); line-height: 1.08; letter-spa
 .view-page { min-height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 11px; color: var(--blue); border: 1px solid #b9c7ec; border-radius: 9px; background: white; cursor: pointer; font-weight: 750; }
 .view-page:disabled { color: #aeb5c1; border-color: #e0e4eb; background: #f6f7f9; cursor: not-allowed; }
 .review-detail { width: min(100%, 650px); max-height: calc(100vh - 40px); overflow-y: auto; position: relative; padding: clamp(26px, 5vw, 42px); border-radius: 23px; background: white; }
+.review-detail-wide { width: min(100%, 1100px); }
 .review-detail h2 { margin: 5px 0 23px; font-size: 27px; }.detail-meta { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; padding: 17px; border-radius: 13px; background: #f7f9fc; }.detail-meta span { color: var(--muted); font-size: 13px; }.detail-meta strong { font-size: 14px; }
 .mock-check-items { margin-top: 18px; display: grid; gap: 8px; }.mock-check-items > div { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }.mock-check { width: 25px; height: 25px; flex: 0 0 auto; display: grid; place-items: center; border: 2px solid #cbd3df; border-radius: 7px; }.mock-check.done { color: white; border-color: var(--green); background: var(--green); font-weight: 900; }.mock-check-items p { margin: 0; display: grid; gap: 3px; }.mock-check-items small { color: var(--muted); }
 
