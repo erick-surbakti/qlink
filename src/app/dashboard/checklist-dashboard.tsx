@@ -1,7 +1,7 @@
 "use client";
 
 import { AREA_STATIONS, formsForArea } from "@/lib/mock-checklist";
-import { BrowserChecklistRecord, CHECKLIST_STORAGE_PREFIX, checklistStorageKey } from "@/lib/mock-session";
+import { BrowserChecklistRecord, buildMockSubmittedRecord, CHECKLIST_STORAGE_PREFIX, checklistStorageKey } from "@/lib/mock-session";
 import { ArrowLeft, Check, CheckCircle2, Clock3, Eye, Factory, FileDown, FilterX, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -9,31 +9,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type QueueTab = "queue" | "all" | "checked";
 
-function createSeedRecord(): BrowserChecklistRecord {
-  const assignedAreas = [1, 2];
-  const forms = assignedAreas.flatMap(formsForArea);
-  const answers: Record<string, string> = {};
-  for (const form of forms) {
-    for (const item of form.items) {
-      answers[item.id] = item.answerType === "number" ? "42" : item.answerType === "text" ? "Mock operator note." : "OK";
-    }
-  }
-  return {
-    id: crypto.randomUUID(),
-    line: "CP1H Line #1",
-    assignedAreas,
-    operatorName: "Mock Operator User",
-    month: new Date().toISOString().slice(0, 7),
-    answers,
-    completedForms: forms.map((form) => form.id),
-    updatedAt: new Date().toISOString(),
-    submissionStatus: "submitted",
-    submittedAt: new Date().toISOString(),
-    approvalStatus: "pending",
-  };
+function createSeedRecord(line = "CP1H Line #1"): BrowserChecklistRecord {
+  return buildMockSubmittedRecord(line, [1, 2]);
 }
 
-function readBrowserRecords() {
+function readBrowserRecords(seedLine = "CP1H Line #1") {
   const records: BrowserChecklistRecord[] = [];
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
@@ -46,7 +26,7 @@ function readBrowserRecords() {
     }
   }
   if (!records.length) {
-    const seeded = createSeedRecord();
+    const seeded = createSeedRecord(seedLine);
     window.localStorage.setItem(checklistStorageKey(seeded.line, seeded.assignedAreas), JSON.stringify(seeded));
     records.push(seeded);
   }
@@ -64,7 +44,7 @@ export default function ChecklistDashboard() {
   const [month, setMonth] = useState("");
   const [selected, setSelected] = useState<BrowserChecklistRecord | null>(null);
 
-  const refresh = useCallback(() => setRecords(readBrowserRecords()), []);
+  const refresh = useCallback(() => setRecords(readBrowserRecords(initialLine || "CP1H Line #1")), [initialLine]);
 
   useEffect(() => {
     refresh();
@@ -88,6 +68,14 @@ export default function ChecklistDashboard() {
     const haystack = `${record.line} ${record.operatorName} ${record.assignedAreas.join(" ")}`.toLowerCase();
     return haystack.includes(search.toLowerCase());
   });
+
+  const mockFallback = useMemo(() => {
+    if (filtered.length) return null;
+    const mock = buildMockSubmittedRecord(line || "CP1H Line #1", [area ? Number(area) : 1]);
+    return month ? { ...mock, month } : mock;
+  }, [area, filtered.length, line, month]);
+
+  const rows = filtered.length ? filtered : mockFallback ? [mockFallback] : [];
 
   const approve = (record: BrowserChecklistRecord) => {
     const updated: BrowserChecklistRecord = { ...record, approvalStatus: "checked", checkedAt: new Date().toISOString(), checkedBy: "Mock Leading User" };
@@ -123,11 +111,11 @@ export default function ChecklistDashboard() {
           <table className="dashboard-table">
             <thead><tr><th>Line</th><th>Month</th><th>Assigned areas</th><th>Operator</th><th>Progress</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead>
             <tbody>
-              {filtered.map((record) => {
+              {rows.map((record) => {
                 const totalForms = record.assignedAreas.length * 3;
                 return <tr key={record.id}><td><strong>{record.line}</strong></td><td>{record.month}</td><td>{record.assignedAreas.map((value) => <span className="area-token" key={value}>{value}</span>)}</td><td>{record.operatorName}</td><td>{record.completedForms.length}/{totalForms} forms</td><td><span className={`approval-pill ${record.approvalStatus}`}>{record.approvalStatus === "checked" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}{record.approvalStatus === "checked" ? "Checked" : "Need review"}</span></td><td>{new Date(record.updatedAt).toLocaleString()}</td><td><button type="button" className="review-button" onClick={() => setSelected(record)}><Eye size={17} />Review</button></td></tr>;
               })}
-              {!filtered.length && <tr><td colSpan={8}><div className="empty-dashboard"><Factory size={34} /><strong>No Operator checklist data found</strong><p>Complete or save a form through the Operator flow in this same browser and domain.</p></div></td></tr>}
+              {!rows.length && <tr><td colSpan={8}><div className="empty-dashboard"><Factory size={34} /><strong>No Operator checklist data found</strong><p>Complete or save a form through the Operator flow in this same browser and domain.</p></div></td></tr>}
             </tbody>
           </table>
         </div>
