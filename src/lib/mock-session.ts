@@ -5,6 +5,7 @@ export const CHECKLIST_STORAGE_PREFIX = "q-link-checklist-mock:record:";
 export type BrowserChecklistRecord = {
   id: string;
   line: string;
+  shift?: string;
   assignedAreas: number[];
   operatorName: string;
   month: string;
@@ -17,6 +18,11 @@ export type BrowserChecklistRecord = {
   checkedAt?: string;
   checkedBy?: string;
 };
+
+export function mockShift(): string {
+  const hour = new Date().getHours();
+  return hour < 8 ? "Shift 3" : hour < 16 ? "Shift 1" : "Shift 2";
+}
 
 export function checklistStorageKey(line: string, assignedAreas: number[]) {
   const identity = `${line}:${assignedAreas.join("-")}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -35,6 +41,7 @@ export function buildMockSubmittedRecord(line: string, assignedAreas: number[]):
   return {
     id: crypto.randomUUID(),
     line,
+    shift: mockShift(),
     assignedAreas,
     operatorName: "Mock Operator User",
     month: now.slice(0, 7),

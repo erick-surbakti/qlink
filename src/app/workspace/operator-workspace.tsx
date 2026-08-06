@@ -1,7 +1,7 @@
 "use client";
 
 import { AREA_STATIONS, ChecklistItem, formsForArea } from "@/lib/mock-checklist";
-import { BrowserChecklistRecord, checklistStorageKey } from "@/lib/mock-session";
+import { BrowserChecklistRecord, checklistStorageKey, mockShift } from "@/lib/mock-session";
 import { ArrowLeft, CheckCircle2, ClipboardList, Factory, LockKeyhole, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -50,7 +50,7 @@ export default function OperatorWorkspace() {
     try { previous = existing ? JSON.parse(existing) as BrowserChecklistRecord : {}; } catch { previous = {}; }
     const now = new Date();
     const progress: BrowserChecklistRecord = {
-      id: previous.id ?? crypto.randomUUID(), line, assignedAreas, operatorName: "Mock Operator User",
+      id: previous.id ?? crypto.randomUUID(), line, shift: mockShift(), assignedAreas, operatorName: "Mock Operator User",
       month: now.toISOString().slice(0, 7), answers, completedForms, updatedAt: now.toISOString(),
       submissionStatus: previous.submissionStatus ?? "draft", submittedAt: previous.submittedAt,
       approvalStatus: previous.approvalStatus ?? "pending", checkedAt: previous.checkedAt, checkedBy: previous.checkedBy,
@@ -67,7 +67,7 @@ export default function OperatorWorkspace() {
     const existing = JSON.parse(window.localStorage.getItem(storageKey) ?? "{}") as Partial<BrowserChecklistRecord>;
     const now = new Date().toISOString();
     const record: BrowserChecklistRecord = {
-      id: existing.id ?? crypto.randomUUID(), line, assignedAreas, operatorName: "Mock Operator User",
+      id: existing.id ?? crypto.randomUUID(), line, shift: mockShift(), assignedAreas, operatorName: "Mock Operator User",
       month: now.slice(0, 7), answers, completedForms, updatedAt: now,
       submissionStatus: "submitted", submittedAt: now, approvalStatus: "pending",
     };
