@@ -15,7 +15,6 @@ export default function AssignmentSelector() {
   const documents = useMemo(() => documentsForLine(line), [line]);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
   const [completedDocuments, setCompletedDocuments] = useState<number[]>([]);
-  const [previewDocument, setPreviewDocument] = useState(documents[0]?.number ?? 1);
 
   useEffect(() => {
     const completed = new Set<number>();
@@ -30,18 +29,16 @@ export default function AssignmentSelector() {
     setCompletedDocuments([...completed].sort((left, right) => left - right));
     const firstAvailable = documents.find((document) => !completed.has(document.number));
     setSelectedDocuments(firstAvailable ? [firstAvailable.number] : []);
-    setPreviewDocument(firstAvailable?.number ?? documents[0]?.number ?? 1);
   }, [documents, line]);
 
   const toggleDocument = (documentNumber: number) => {
     if (completedDocuments.includes(documentNumber)) return;
-    setPreviewDocument(documentNumber);
     setSelectedDocuments((current) => current.includes(documentNumber)
       ? current.filter((value) => value !== documentNumber)
       : [...current, documentNumber].sort((left, right) => left - right));
   };
 
-  const preview = documents.find((document) => document.number === previewDocument) ?? documents[0];
+  const previews = documents.filter((document) => selectedDocuments.includes(document.number));
   const openChecklist = () => router.push(`/workspace?line=${encodeURIComponent(line)}&areas=${selectedDocuments.join(",")}`);
 
   return <main className="shell"><section className="assignment-panel document-assignment-panel">
@@ -65,11 +62,11 @@ export default function AssignmentSelector() {
       </div>
 
       <aside className="document-preview-panel">
-        <div className="document-preview-head"><FileText size={24} /><div><span>Preview pekerjaan Operator</span><strong>{preview?.name}</strong></div></div>
-        {preview && <>
-          <div className="paper-preview"><div className="paper-preview-title"><strong>{preview.name}</strong><small>{line} · Source page {preview.sourcePage}</small></div><table><thead><tr><th>Item</th><th>Specification</th><th>Result</th></tr></thead><tbody>{preview.items.slice(0, 6).map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.specification}</td><td>{item.answerType === "choice" ? "OK / NG" : item.unit || "Input"}</td></tr>)}</tbody></table></div>
-          <p>Preview menampilkan item yang akan diisi. Klik dokumen lain untuk melihat isinya sebelum memilih.</p>
-        </>}
+        <div className="document-preview-head"><FileText size={24} /><div><span>Preview pekerjaan Operator</span><strong>{previews.length} dokumen dipilih</strong></div></div>
+        {previews.length ? <div className="document-preview-list">{previews.map((preview) =>
+          <div className="paper-preview" key={preview.number}><div className="paper-preview-title"><strong>{preview.name}</strong><small>{line} · Source page {preview.sourcePage}</small></div><table><thead><tr><th>Item</th><th>Specification</th><th>Result</th></tr></thead><tbody>{preview.items.slice(0, 6).map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.specification}</td><td>{item.answerType === "choice" ? "OK / NG" : item.unit || "Input"}</td></tr>)}</tbody></table></div>
+        )}</div> : <p>Pilih dokumen untuk menampilkan preview pekerjaan.</p>}
+        {previews.length > 0 && <p>Semua dokumen yang dipilih ditampilkan sesuai urutan pengerjaan.</p>}
       </aside>
     </div>
 
