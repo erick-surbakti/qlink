@@ -26,4 +26,7 @@ npm run dev
 npm run dev (only)
 ```
 
+
+Default installation (WGS LEFT)
+
 Default mock port: `8586`.
