@@ -22,4 +22,8 @@ npm install
 npm run dev
 ```
 
+``` Run Locally
+npm run dev (only)
+```
+
 Default mock port: `8586`.
