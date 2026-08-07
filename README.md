@@ -27,6 +27,9 @@ npm run dev (only)
 ```
 
 
+new update : 
+preview connectivity
+
 Default installation (WGS LEFT)
 
 Default mock port: `8586`.
