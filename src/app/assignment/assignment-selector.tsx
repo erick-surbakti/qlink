@@ -1,27 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Factory, Layers3, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ClipboardList, FileText, LockKeyhole } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { documentsForLine } from "@/lib/mock-checklist";
 import { BrowserChecklistRecord, CHECKLIST_STORAGE_PREFIX } from "@/lib/mock-session";
-
-const TOTAL_AREAS = 10;
-
-function areaRange(start: number, end: number) {
-  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-}
 
 export default function AssignmentSelector() {
   const router = useRouter();
   const params = useSearchParams();
   const role = params.get("role") === "leading" ? "leading" : "operator";
   const line = params.get("line") || "Mock Production Line";
-  const [startArea, setStartArea] = useState(1);
-  const [endArea, setEndArea] = useState(1);
-  const [completedAreas, setCompletedAreas] = useState<number[]>([]);
-  const selectedAreas = useMemo(() => areaRange(startArea, endArea), [endArea, startArea]);
-  const hasCompletedArea = selectedAreas.some((area) => completedAreas.includes(area));
+  const documents = useMemo(() => documentsForLine(line), [line]);
+  const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
+  const [completedDocuments, setCompletedDocuments] = useState<number[]>([]);
+  const [previewDocument, setPreviewDocument] = useState(documents[0]?.number ?? 1);
 
   useEffect(() => {
     const completed = new Set<number>();
@@ -30,44 +24,55 @@ export default function AssignmentSelector() {
       if (!key?.startsWith(CHECKLIST_STORAGE_PREFIX)) continue;
       try {
         const record = JSON.parse(window.localStorage.getItem(key) ?? "") as BrowserChecklistRecord;
-        if (record.line === line && record.submissionStatus === "submitted") record.assignedAreas.forEach((area) => completed.add(area));
+        if (record.line === line && record.submissionStatus === "submitted") record.assignedAreas.forEach((document) => completed.add(document));
       } catch { /* Ignore malformed mock records. */ }
     }
-    const values = [...completed].sort((left, right) => left - right);
-    setCompletedAreas(values);
-    const firstAvailable = Array.from({ length: TOTAL_AREAS }, (_, index) => index + 1).find((area) => !completed.has(area));
-    if (firstAvailable) { setStartArea(firstAvailable); setEndArea(firstAvailable); }
-  }, [line]);
+    setCompletedDocuments([...completed].sort((left, right) => left - right));
+    const firstAvailable = documents.find((document) => !completed.has(document.number));
+    setSelectedDocuments(firstAvailable ? [firstAvailable.number] : []);
+    setPreviewDocument(firstAvailable?.number ?? documents[0]?.number ?? 1);
+  }, [documents, line]);
 
-  const chooseStart = (value: number) => {
-    setStartArea(value);
-    if (endArea < value) setEndArea(value);
+  const toggleDocument = (documentNumber: number) => {
+    if (completedDocuments.includes(documentNumber)) return;
+    setPreviewDocument(documentNumber);
+    setSelectedDocuments((current) => current.includes(documentNumber)
+      ? current.filter((value) => value !== documentNumber)
+      : [...current, documentNumber].sort((left, right) => left - right));
   };
 
-  const openChecklist = () => router.push(`/workspace?line=${encodeURIComponent(line)}&areas=${selectedAreas.join(",")}`);
+  const preview = documents.find((document) => document.number === previewDocument) ?? documents[0];
+  const openChecklist = () => router.push(`/workspace?line=${encodeURIComponent(line)}&areas=${selectedDocuments.join(",")}`);
 
-  return <main className="shell"><section className="assignment-panel compact-assignment">
+  return <main className="shell"><section className="assignment-panel document-assignment-panel">
     <header className="verify-header">
       <Link href={`/verify?role=${role}`} className="back-button" aria-label="Back"><ArrowLeft size={22} /></Link>
-      <div><p className="eyebrow">OPERATOR CHECKLIST · {line}</p><h1>Pilih Rentang Pengerjaan</h1><p className="lead">Pilih awal dan akhir pengerjaan, periksa posisinya, lalu buka checklist.</p></div>
+      <div><p className="eyebrow">OPERATOR CHECKLIST · {line}</p><h1>Pilih Dokumen Checklist</h1><p className="lead">Pilih satu atau beberapa dokumen yang akan dikerjakan. Dokumen tidak harus berurutan.</p></div>
     </header>
 
-    <div className="assignment-combined">
-      <div className="range-card">
-        <div className="range-fields">
-          <label><span>Awal Pengerjaan</span><select value={startArea} onChange={(event) => chooseStart(Number(event.target.value))}>{Array.from({ length: TOTAL_AREAS }, (_, index) => index + 1).map((area) => <option value={area} disabled={completedAreas.includes(area)} key={area}>Tahap {area}{completedAreas.includes(area) ? " — submitted" : ""}</option>)}</select></label>
-          <span className="range-arrow"><ArrowRight size={24} /></span>
-          <label><span>Akhir Pengerjaan</span><select value={endArea} onChange={(event) => setEndArea(Number(event.target.value))}>{Array.from({ length: TOTAL_AREAS - startArea + 1 }, (_, index) => startArea + index).map((area) => <option value={area} disabled={areaRange(startArea, area).some((value) => completedAreas.includes(value))} key={area}>Tahap {area}</option>)}</select></label>
-        </div>
-        <div className="selection-preview"><Layers3 size={22} /><span>Rentang pengerjaan</span><strong>{startArea === endArea ? `Tahap ${startArea}` : `Tahap ${startArea}-${endArea}`}</strong><small>{selectedAreas.length} dari {TOTAL_AREAS} tahap</small></div>
+    <div className="document-assignment-layout">
+      <div className="document-picker-panel">
+        <div className="document-picker-heading"><div><ClipboardList size={21} /><strong>Dokumen untuk line ini</strong></div><span>{selectedDocuments.length} dipilih</span></div>
+        <div className="document-option-list">{documents.map((document) => {
+          const selected = selectedDocuments.includes(document.number);
+          const completed = completedDocuments.includes(document.number);
+          return <button type="button" className={`document-option${selected ? " selected" : ""}${completed ? " completed" : ""}`} disabled={completed} onClick={() => toggleDocument(document.number)} key={document.number}>
+            <span className="document-check">{completed || selected ? <Check size={17} /> : document.number}</span>
+            <span><strong>{document.name}</strong><small>{document.process}</small></span>
+            <em>{completed ? "Submitted" : `Page ${document.sourcePage}`}</em>
+          </button>;
+        })}</div>
       </div>
 
-      <div className="inline-u-confirm">
-        <div className="u-line" aria-label="U-shaped production line">{Array.from({ length: TOTAL_AREAS }, (_, index) => index + 1).map((area) => <div className={`u-station station-${area}${selectedAreas.includes(area) ? " active" : ""}${completedAreas.includes(area) ? " submitted" : ""}`} key={area}><Factory size={17} /><span>{area}</span></div>)}</div>
-        <p>Blue is your selection. Green areas were already submitted and cannot be selected again.</p>
-      </div>
+      <aside className="document-preview-panel">
+        <div className="document-preview-head"><FileText size={24} /><div><span>Preview pekerjaan Operator</span><strong>{preview?.name}</strong></div></div>
+        {preview && <>
+          <div className="paper-preview"><div className="paper-preview-title"><strong>{preview.name}</strong><small>{line} · Source page {preview.sourcePage}</small></div><table><thead><tr><th>Item</th><th>Specification</th><th>Result</th></tr></thead><tbody>{preview.items.slice(0, 6).map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.specification}</td><td>{item.answerType === "choice" ? "OK / NG" : item.unit || "Input"}</td></tr>)}</tbody></table></div>
+          <p>Preview menampilkan item yang akan diisi. Klik dokumen lain untuk melihat isinya sebelum memilih.</p>
+        </>}
+      </aside>
     </div>
 
-    <button className="primary-button direct-checklist-button" type="button" disabled={hasCompletedArea || completedAreas.length === TOTAL_AREAS} onClick={openChecklist}><LockKeyhole size={18} />{completedAreas.length === TOTAL_AREAS ? "All areas already submitted" : "Confirm & open checklist"}<ArrowRight size={18} /></button>
+    <button className="primary-button direct-checklist-button" type="button" disabled={!selectedDocuments.length} onClick={openChecklist}><LockKeyhole size={18} />{completedDocuments.length === documents.length ? "Semua dokumen sudah submitted" : `Buka ${selectedDocuments.length} dokumen terpilih`}<ArrowRight size={18} /></button>
   </section></main>;
 }

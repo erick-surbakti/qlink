@@ -1,6 +1,6 @@
 "use client";
 
-import { AREA_STATIONS, ChecklistItem, formsForArea } from "@/lib/mock-checklist";
+import { ChecklistItem, documentsForLine, formsForDocument } from "@/lib/mock-checklist";
 import { BrowserChecklistRecord, checklistStorageKey } from "@/lib/mock-session";
 import { ArrowLeft, CheckCircle2, ClipboardList, Factory, LockKeyhole, Send } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +17,8 @@ export default function OperatorWorkspace() {
   const params = useSearchParams();
   const line = params.get("line") || "Mock Production Line";
   const assignedAreas = useMemo(() => parseAreas(params.get("areas")), [params]);
-  const forms = useMemo(() => assignedAreas.flatMap(formsForArea), [assignedAreas]);
+  const documents = useMemo(() => documentsForLine(line), [line]);
+  const forms = useMemo(() => assignedAreas.flatMap((document) => formsForDocument(document, line)), [assignedAreas, line]);
   const storageKey = useMemo(() => checklistStorageKey(line, assignedAreas), [assignedAreas, line]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [completedForms, setCompletedForms] = useState<string[]>([]);
@@ -79,18 +80,19 @@ export default function OperatorWorkspace() {
   return <main className="workspace-shell"><section className="workspace-panel simplified-workspace">
     <header className="workspace-header no-print">
       <Link href={`/assignment?role=operator&line=${encodeURIComponent(line)}`} className="back-button" aria-label="Back to area selection"><ArrowLeft size={22} /></Link>
-      <div><p className="eyebrow">OPERATOR DIGITAL CHECKLIST</p><h1>Fill Checklist</h1><p className="lead"><Factory size={17} />{line} · Areas {assignedAreas.join(", ")}</p></div>
+      <div><p className="eyebrow">OPERATOR DIGITAL CHECKLIST</p><h1>Fill Checklist</h1><p className="lead"><Factory size={17} />{line} · Documents {assignedAreas.join(", ")}</p></div>
     </header>
 
     <div className="quick-progress no-print"><span><ClipboardList size={19} />Fill every result directly in the table. Changes save automatically.</span><strong>{answeredCount}/{totalItems} items</strong></div>
     <div className="progress-track no-print"><span style={{ width: `${totalItems ? (answeredCount / totalItems) * 100 : 0}%` }} /></div>
 
     <div className="compact-area-list">
-      {assignedAreas.map((areaNumber, areaIndex) => {
-        const area = AREA_STATIONS[areaNumber - 1];
-        return <section className="compact-area" key={areaNumber}>
-          <div className={`area-stage-divider stage-${(areaIndex % 3) + 1}`}><span>Process {areaIndex + 1}</span><div><strong>{area.name}</strong><small>{area.process}</small></div><em>{areaIndex + 1} / {assignedAreas.length}</em></div>
-          {formsForArea(areaNumber).map((form) => {
+      {assignedAreas.map((documentNumber, documentIndex) => {
+        const document = documents.find((item) => item.number === documentNumber);
+        if (!document) return null;
+        return <section className="compact-area" key={documentNumber}>
+          <div className={`area-stage-divider stage-${(documentIndex % 3) + 1}`}><span>Document {documentNumber}</span><div><strong>{document.name}</strong><small>{document.process}</small></div><em>{documentIndex + 1} / {assignedAreas.length}</em></div>
+          {formsForDocument(documentNumber, line).map((form) => {
             const complete = completedForms.includes(form.id);
             return <div className={`inline-checklist${complete ? " complete" : ""}`} key={form.id}>
               <div className="inline-checklist-title"><div><strong>{form.title}</strong><small>{form.frequency}</small></div>{complete && <span><CheckCircle2 size={16} />Complete</span>}</div>
