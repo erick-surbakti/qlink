@@ -2,13 +2,13 @@
 
 import { ChecklistItem, documentsForLine, formsForDocument } from "@/lib/mock-checklist";
 import { BrowserChecklistRecord, checklistStorageKey, mockShift } from "@/lib/mock-session";
-import { ArrowLeft, CheckCircle2, ClipboardList, Factory, LockKeyhole, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardList, Factory, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 function parseAreas(value: string | null) {
-  const areas = (value ?? "1").split(",").map(Number).filter((number) => number >= 1 && number <= 10);
+  const areas = (value ?? "1").split(",").map(Number).filter((number) => number >= 1 && number <= 100);
   return [...new Set(areas)].sort((left, right) => left - right);
 }
 
@@ -63,20 +63,6 @@ export default function OperatorWorkspace() {
   const answeredCount = Object.values(answers).filter(Boolean).length;
   const totalItems = forms.reduce((total, form) => total + form.items.length, 0);
 
-  const submitAssignment = () => {
-    if (!allComplete || submitted) return;
-    const existing = JSON.parse(window.localStorage.getItem(storageKey) ?? "{}") as Partial<BrowserChecklistRecord>;
-    const now = new Date().toISOString();
-    const record: BrowserChecklistRecord = {
-      id: existing.id ?? crypto.randomUUID(), line, shift: mockShift(), assignedAreas, operatorName: "Mock Operator User",
-      month: now.slice(0, 7), answers, completedForms, updatedAt: now,
-      submissionStatus: "submitted", submittedAt: now, approvalStatus: "pending",
-    };
-    window.localStorage.setItem(storageKey, JSON.stringify(record));
-    setSubmitted(true);
-    router.push("/");
-  };
-
   return <main className="workspace-shell"><section className="workspace-panel simplified-workspace">
     <header className="workspace-header no-print">
       <Link href={`/assignment?role=operator&line=${encodeURIComponent(line)}`} className="back-button" aria-label="Back to area selection"><ArrowLeft size={22} /></Link>
@@ -102,8 +88,8 @@ export default function OperatorWorkspace() {
         </section>;
       })}
     </div>
-    {allComplete && !submitted && <div className="bottom-submit no-print"><div><strong>All assigned areas are complete</strong><small>Submit once to lock your entries and hand them over to Leading.</small></div><button className="operator-submit-button" type="button" onClick={submitAssignment}><Send size={18} />Submit my areas</button></div>}
-    <footer className={`autosave-footer no-print${allComplete ? " complete" : ""}`}><span>{submitted ? <LockKeyhole size={20} /> : allComplete ? <CheckCircle2 size={20} /> : <ClipboardList size={20} />}</span><div><strong>{submitted ? "Your assigned areas have been submitted" : allComplete ? "Ready to submit" : "Draft saved automatically"}</strong><small>{submitted ? "These areas are locked. Another Operator can continue the remaining areas on this line." : allComplete ? "Submit once to hand your areas over to Leading." : "Continue filling the empty rows—no Next button is required."}</small></div></footer>
+    {!submitted && <div className="bottom-submit no-print"><div><strong>{allComplete ? "Operator input is complete" : "Operator progress is saved"}</strong><small>Leading can review this line immediately, including incomplete answers.</small></div><button className="operator-submit-button" type="button" onClick={() => router.push("/")}>Finish operator session</button></div>}
+    <footer className={`autosave-footer no-print${allComplete ? " complete" : ""}`}><span>{submitted ? <LockKeyhole size={20} /> : allComplete ? <CheckCircle2 size={20} /> : <ClipboardList size={20} />}</span><div><strong>{submitted ? "Finalized by Leading" : allComplete ? "All Operator fields completed" : "Progress saved automatically"}</strong><small>{submitted ? "This checklist has been sent to the Dashboard." : "Every change is already available on the Leading page; Operator does not submit the final record."}</small></div></footer>
   </section></main>;
 }
 

@@ -1,34 +1,25 @@
 "use client";
 
 import { AREA_STATIONS, formsForArea } from "@/lib/mock-checklist";
-import { BrowserChecklistRecord, buildMockSubmittedRecord, CHECKLIST_STORAGE_PREFIX, checklistStorageKey } from "@/lib/mock-session";
-import { ArrowLeft, Check, CheckCircle2, Clock3, Eye, Factory, FileDown, FilterX, Search, X } from "lucide-react";
+import { BrowserChecklistRecord, CHECKLIST_STORAGE_PREFIX } from "@/lib/mock-session";
+import { ArrowLeft, CheckCircle2, Clock3, Eye, Factory, FileDown, FilterX, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type QueueTab = "queue" | "all" | "checked";
 
-function createSeedRecord(line = "CP1H Line #1"): BrowserChecklistRecord {
-  return buildMockSubmittedRecord(line, [1, 2]);
-}
-
-function readBrowserRecords(seedLine = "CP1H Line #1") {
+function readBrowserRecords() {
   const records: BrowserChecklistRecord[] = [];
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
     if (!key?.startsWith(CHECKLIST_STORAGE_PREFIX)) continue;
     try {
       const record = JSON.parse(window.localStorage.getItem(key) ?? "") as BrowserChecklistRecord;
-      if (record.id && record.line) records.push(record);
+      if (record.id && record.line && record.submissionStatus === "submitted" && record.approvalStatus === "checked") records.push(record);
     } catch {
       // Ignore malformed mock entries without affecting other browser data.
     }
-  }
-  if (!records.length) {
-    const seeded = createSeedRecord(seedLine);
-    window.localStorage.setItem(checklistStorageKey(seeded.line, seeded.assignedAreas), JSON.stringify(seeded));
-    records.push(seeded);
   }
   return records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
@@ -37,14 +28,14 @@ export default function ChecklistDashboard() {
   const params = useSearchParams();
   const initialLine = params.get("line") ?? "";
   const [records, setRecords] = useState<BrowserChecklistRecord[]>([]);
-  const [tab, setTab] = useState<QueueTab>("queue");
+  const [tab, setTab] = useState<QueueTab>("all");
   const [search, setSearch] = useState("");
   const [line, setLine] = useState(initialLine);
   const [area, setArea] = useState("");
   const [month, setMonth] = useState("");
   const [selected, setSelected] = useState<BrowserChecklistRecord | null>(null);
 
-  const refresh = useCallback(() => setRecords(readBrowserRecords(initialLine || "CP1H Line #1")), [initialLine]);
+  const refresh = useCallback(() => setRecords(readBrowserRecords()), []);
 
   useEffect(() => {
     refresh();
@@ -69,20 +60,7 @@ export default function ChecklistDashboard() {
     return haystack.includes(search.toLowerCase());
   });
 
-  const mockFallback = useMemo(() => {
-    if (filtered.length) return null;
-    const mock = buildMockSubmittedRecord(line || "CP1H Line #1", [area ? Number(area) : 1]);
-    return month ? { ...mock, month } : mock;
-  }, [area, filtered.length, line, month]);
-
-  const rows = filtered.length ? filtered : mockFallback ? [mockFallback] : [];
-
-  const approve = (record: BrowserChecklistRecord) => {
-    const updated: BrowserChecklistRecord = { ...record, approvalStatus: "checked", checkedAt: new Date().toISOString(), checkedBy: "Mock Leading User" };
-    window.localStorage.setItem(checklistStorageKey(record.line, record.assignedAreas), JSON.stringify(updated));
-    setSelected(updated);
-    refresh();
-  };
+  const rows = filtered;
 
   return (
     <main className="dashboard-shell">
@@ -123,7 +101,7 @@ export default function ChecklistDashboard() {
 
       <DashboardAnalysis records={records} initialLine={initialLine} />
 
-      {selected && <DashboardReview record={selected} onClose={() => setSelected(null)} onApprove={() => approve(selected)} />}
+      {selected && <DashboardReview record={selected} onClose={() => setSelected(null)} />}
     </main>
   );
 }
@@ -169,7 +147,7 @@ function DashboardAnalysis({ records, initialLine }: { records: BrowserChecklist
   </section>;
 }
 
-function DashboardReview({ record, onClose, onApprove }: { record: BrowserChecklistRecord; onClose: () => void; onApprove: () => void }) {
+function DashboardReview({ record, onClose }: { record: BrowserChecklistRecord; onClose: () => void }) {
   const allForms = record.assignedAreas.flatMap(formsForArea);
   const numericValues = Object.values(record.answers).map(Number).filter((value) => Number.isFinite(value));
   const chartValues = numericValues.length >= 5 ? numericValues.slice(0, 12) : [22, 25, 24, 28, 26, 27, 31, 25, 29, 27, 30, 26];
@@ -182,6 +160,6 @@ function DashboardReview({ record, onClose, onApprove }: { record: BrowserCheckl
       <table><thead><tr><th>Area</th><th>Checklist</th><th>Item check</th><th>Specification</th><th>Result</th></tr></thead><tbody>{record.assignedAreas.flatMap((areaNumber) => formsForArea(areaNumber).flatMap((form) => form.items.map((item) => <tr key={item.id}><td>{areaNumber}</td><td>{form.title}</td><td>{item.name}</td><td>{item.specification}</td><td>{record.answers[item.id] || "-"}</td></tr>)))}</tbody></table>
     </div>
     <div className="mock-control-chart"><h3>Mock Process Trend</h3><svg viewBox="0 0 600 180" role="img" aria-label="Mock process trend"><line x1="20" y1="150" x2="580" y2="150" /><line x1="20" y1="25" x2="20" y2="150" /><line className="limit" x1="20" y1="50" x2="580" y2="50" /><line className="average" x1="20" y1="100" x2="580" y2="100" /><polyline points={points} /></svg></div>
-    <footer className="dashboard-review-actions no-print"><button type="button" className="secondary-button" onClick={() => window.print()}><FileDown size={18} />Generate PDF</button>{record.approvalStatus === "pending" && <button type="button" className="complete-button" onClick={onApprove}><Check size={18} />Checked / Approved</button>}</footer>
+    <footer className="dashboard-review-actions no-print"><button type="button" className="secondary-button" onClick={() => window.print()}><FileDown size={18} />Generate PDF</button></footer>
   </section></div>;
 }
